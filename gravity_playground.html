@@ -1,0 +1,78 @@
+<div style="display:flex;gap:12px;align-items:center;margin:0 0 1rem;flex-wrap:wrap">
+  <label style="font-size:13px;color:var(--text-secondary)">Gravity</label>
+  <input type="range" id="gravity" min="0.1" max="2" step="0.1" value="0.5" style="width:100px"/>
+  <label style="font-size:13px;color:var(--text-secondary)">Bounce</label>
+  <input type="range" id="bounce" min="0.5" max="0.98" step="0.02" value="0.8" style="width:100px"/>
+  <button id="clear">Clear</button>
+  <button id="burst">Burst</button>
+</div>
+<canvas id="canvas" style="width:100%;height:360px;background:var(--surface-1);border-radius:12px;display:block;cursor:crosshair"></canvas>
+<p style="font-size:12px;color:var(--text-muted);margin-top:8px">Click or drag on the canvas to drop balls</p>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resize(){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = 360 * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const colors = ['#7F77DD','#1D9E75','#D85A30','#D4537E','#378ADD','#639922','#EF9F27'];
+let balls = [];
+
+function addBall(x,y){
+  const r = 10 + Math.random()*14;
+  balls.push({
+    x, y, r,
+    vx: (Math.random()-0.5)*6,
+    vy: (Math.random()-0.5)*4,
+    color: colors[Math.floor(Math.random()*colors.length)]
+  });
+  if (balls.length > 80) balls.shift();
+}
+
+let dragging = false;
+canvas.addEventListener('pointerdown', e => {
+  dragging = true;
+  const rect = canvas.getBoundingClientRect();
+  addBall(e.clientX-rect.left, e.clientY-rect.top);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const rect = canvas.getBoundingClientRect();
+  if (Math.random() < 0.3) addBall(e.clientX-rect.left, e.clientY-rect.top);
+});
+window.addEventListener('pointerup', () => dragging = false);
+
+document.getElementById('clear').onclick = () => balls = [];
+document.getElementById('burst').onclick = () => {
+  const w = canvas.getBoundingClientRect().width;
+  for (let i=0;i<20;i++) addBall(w/2 + (Math.random()-0.5)*40, 60);
+};
+
+function step(){
+  const w = canvas.getBoundingClientRect().width;
+  const h = 360;
+  const g = parseFloat(document.getElementById('gravity').value);
+  const b = parseFloat(document.getElementById('bounce').value);
+  ctx.clearRect(0,0,w,h);
+  for (const ball of balls){
+    ball.vy += g;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    if (ball.x - ball.r < 0){ ball.x = ball.r; ball.vx *= -b; }
+    if (ball.x + ball.r > w){ ball.x = w - ball.r; ball.vx *= -b; }
+    if (ball.y + ball.r > h){ ball.y = h - ball.r; ball.vy *= -b; ball.vx *= 0.98; }
+    if (ball.y - ball.r < 0){ ball.y = ball.r; ball.vy *= -b; }
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+    ctx.fillStyle = ball.color;
+    ctx.fill();
+  }
+  requestAnimationFrame(step);
+}
+step();
+</script>
